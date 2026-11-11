@@ -6,4 +6,5 @@ Rails.application.routes.draw do
   # index, show, new, create, edit, update, destroy. For example:
   # resources("companies")
   resources("places")
+  resources("entries")
 end
