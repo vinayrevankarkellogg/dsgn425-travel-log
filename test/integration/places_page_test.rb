@@ -76,4 +76,92 @@ class PlacesPageTest < ActionDispatch::IntegrationTest
     assert_response(:success)
     assert_select("li", { :text => "Mexico City" })
   end
+
+  test "Each place on the places page links to that place's page." do
+    lisbon = Place.new
+    lisbon["name"] = "Lisbon"
+    lisbon.save
+
+    kyoto = Place.new
+    kyoto["name"] = "Kyoto"
+    kyoto.save
+
+    get("/places")
+
+    assert_response(:success)
+    assert_select("a[href='/places/#{lisbon["id"]}']", { :text => "Lisbon" })
+    assert_select("a[href='/places/#{kyoto["id"]}']", { :text => "Kyoto" })
+  end
+
+  test "The place's page displays the name of the place." do
+    lisbon = Place.new
+    lisbon["name"] = "Lisbon"
+    lisbon.save
+
+    get("/places/#{lisbon["id"]}")
+
+    assert_response(:success)
+    assert_select("h1", { :text => "Lisbon" })
+  end
+
+  test "The place's page lists each of its entries with its title, description, and the day it happened." do
+    lisbon = Place.new
+    lisbon["name"] = "Lisbon"
+    lisbon.save
+
+    tram = Entry.new
+    tram["title"] = "Tram 28 at sunrise"
+    tram["description"] = "Rode the yellow tram from end to end before the crowds."
+    tram["occurred_on"] = "2026-03-14"
+    tram["place_id"] = lisbon["id"]
+    tram.save
+
+    sardines = Entry.new
+    sardines["title"] = "Grilled sardines in Alfama"
+    sardines["description"] = "Six of them."
+    sardines["occurred_on"] = "2026-03-15"
+    sardines["place_id"] = lisbon["id"]
+    sardines.save
+
+    get("/places/#{lisbon["id"]}")
+
+    assert_response(:success)
+    assert_select("li", /Tram 28 at sunrise/)
+    assert_select("li", /Rode the yellow tram from end to end before the crowds\./)
+    assert_select("li", /2026-03-14/)
+    assert_select("li", /Grilled sardines in Alfama/)
+    assert_select("li", /Six of them\./)
+    assert_select("li", /2026-03-15/)
+  end
+
+  test "The place's page only displays entries that belong to that place." do
+    lisbon = Place.new
+    lisbon["name"] = "Lisbon"
+    lisbon.save
+
+    kyoto = Place.new
+    kyoto["name"] = "Kyoto"
+    kyoto.save
+
+    sardines = Entry.new
+    sardines["title"] = "Grilled sardines in Alfama"
+    sardines["description"] = "Six of them."
+    sardines["occurred_on"] = "2026-03-15"
+    sardines["place_id"] = lisbon["id"]
+    sardines.save
+
+    shrine = Entry.new
+    shrine["title"] = "Fushimi Inari before breakfast"
+    shrine["description"] = "Walked the torii gates up the mountain at 6 am."
+    shrine["occurred_on"] = "2025-11-02"
+    shrine["place_id"] = kyoto["id"]
+    shrine.save
+
+    get("/places/#{lisbon["id"]}")
+
+    assert_response(:success)
+    assert_select("li", 1)
+    assert_select("li", /Grilled sardines in Alfama/)
+    assert_select("li", { :text => /Fushimi Inari before breakfast/, :count => 0 })
+  end
 end
